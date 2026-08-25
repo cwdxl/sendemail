@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gmail 草稿发送器</title>
+    <style>
+        :root {
+            --primary: #4A6CF7;
+            --primary-dark: #3A56D4;
+            --primary-light: #E8EDFE;
+            --bg: #F0F2F5;
+            --card-bg: #FFFFFF;
+            --text: #1A1A2E;
+            --text-secondary: #6B7280;
+            --text-muted: #9CA3AF;
+            --border: #E5E7EB;
+            --success: #10B981;
+            --success-bg: #D1FAE5;
+            --danger: #EF4444;
+            --danger-bg: #FEE2E2;
+            --warning: #F59E0B;
+            --warning-bg: #FEF3C7;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 4px 8px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.08);
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ========== 头部 ========== */
+        .app-header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        }
+        .app-header .header-inner {
+            max-width: 960px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .app-header .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        .app-header .logo .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(74, 108, 247, 0.3);
+        }
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* ========== 按钮 ========== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 18px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-weight: 600;
+            font-family: var(--font);
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            user-select: none;
+            white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active {
+            transform: scale(0.97);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 2px 8px rgba(74, 108, 247, 0.35);
+        }
+        .btn-primary:disabled {
+            background: #B0B8C5;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1.5px solid var(--border);
+        }
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        .btn-send {
+            background: var(--primary);
+            color: #fff;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            border-radius: var(--radius-sm);
+        }
+        .btn-send:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 2px 8px rgba(74, 108, 247, 0.3);
+        }
+        .btn-send:disabled {
+            background: #C5C9D6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .btn-send.success-sent {
+            background: var(--success);
+        }
+        .btn-send.error-sent {
+            background: var(--danger);
+        }
+
+        /* ========== 主容器 ========== */
+        .main-container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 24px 20px 60px;
+        }
+
+        /* ========== 设置面板 ========== */
+        .settings-panel {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            display: none;
+            border-left: 4px solid var(--primary);
+            animation: slideDown 0.3s ease-out;
+        }
+        .settings-panel.visible {
+            display: block;
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .settings-panel h3 {
+            font-size: 1.05rem;
+            margin-bottom: 14px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-family: var(--font);
+            transition: var(--transition);
+            background: var(--bg);
+            color: var(--text);
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.12);
+            background: #fff;
+        }
+        .form-group .hint {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* ========== 统计栏 ========== */
+        .stats-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .stats-bar .stats-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .stats-bar .quota-hint {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            background: var(--warning-bg);
+            color: var(--warning);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        /* ========== 草稿列表 ========== */
+        .draft-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        @media (min-width: 700px) {
+            .draft-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (min-width: 1000px) {
+            .draft-list {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .draft-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: var(--transition);
+            border: 1.5px solid transparent;
+            animation: cardAppear 0.35s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+        .draft-card:hover {
+            box-shadow: var(--shadow-hover);
+            border-color: var(--primary-light);
+            transform: translateY(-2px);
+        }
+        @keyframes cardAppear {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .draft-card .card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .draft-card .draft-subject {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.35;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            flex: 1;
+        }
+        .draft-card .draft-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 3px 8px;
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .draft-card .draft-to {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            word-break: break-all;
+        }
+        .draft-card .draft-to .to-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .draft-card .draft-preview {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            flex: 1;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            background: var(--bg);
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--border);
+        }
+        .draft-card .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: auto;
+            gap: 8px;
+        }
+        .draft-card .draft-id-hint {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            user-select: all;
+            cursor: text;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 120px;
+        }
+
+        /* ========== 加载状态 ========== */
+        .loading-state {
+            text-align: center;
+            padding: 60px 20px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .loading-state.visible {
+            display: flex;
+        }
+        .spinner {
+            width: 42px;
+            height: 42px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .loading-state p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* ========== 空状态 ========== */
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        .empty-state.visible {
+            display: flex;
+        }
+        .empty-state .empty-icon {
+            font-size: 3rem;
+        }
+        .empty-state h3 {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+        .empty-state p {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            max-width: 360px;
+        }
+
+        /* ========== Toast 通知 ========== */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+            pointer-events: none;
+            width: 90%;
+            max-width: 400px;
+        }
+        .toast {
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 0.88rem;
+            font-weight: 500;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            animation: toastIn 0.35s ease-out, toastOut 0.3s ease-in 2.8s forwards;
+            pointer-events: auto;
+            text-align: center;
+            width: 100%;
+        }
+        .toast-success {
+            background: var(--success-bg);
+            color: #065F46;
+            border: 1px solid var(--success);
+        }
+        .toast-error {
+            background: var(--danger-bg);
+            color: #991B1B;
+            border: 1px solid var(--danger);
+        }
+        .toast-info {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border: 1px solid var(--primary);
+        }
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        @keyframes toastOut {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.95);
+            }
+        }
+
+        /* ========== 响应式调整 ========== */
+        @media (max-width: 600px) {
+            .app-header {
+                padding: 12px 16px;
+            }
+            .app-header .logo {
+                font-size: 1.1rem;
+            }
+            .app-header .logo .logo-icon {
+                width: 30px;
+                height: 30px;
+                font-size: 0.95rem;
+                border-radius: 8px;
+            }
+            .main-container {
+                padding: 16px 12px 80px;
+            }
+            .draft-list {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .draft-card {
+                padding: 14px 16px;
+            }
+            .btn {
+                padding: 8px 14px;
+                font-size: 0.82rem;
+            }
+            .btn-send {
+                padding: 7px 14px;
+                font-size: 0.8rem;
+            }
+            .settings-panel {
+                padding: 16px 18px;
+            }
+            .toast-container {
+                bottom: 16px;
+                width: 92%;
+            }
+        }
+
+        /* ========== 响应式：大屏 ========== */
+        @media (min-width: 1400px) {
+            .main-container {
+                max-width: 1100px;
+            }
+            .draft-list {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========== 头部 ========== -->
+    <header class="app-header">
+        <div class="header-inner">
+            <div class="logo">
+                <span class="logo-icon">✉️</span>
+                <span>Gmail 草稿发送器</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-outline" id="refreshBtn" title="刷新草稿列表">
+                    🔄 刷新
+                </button>
+                <button class="btn btn-outline" id="settingsToggleBtn" title="打开设置">
+                    ⚙️ 设置
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========== 主内容 ========== -->
+    <main class="main-container">
+
+        <!-- 设置面板 -->
+        <div class="settings-panel" id="settingsPanel">
+            <h3>🔧 API 设置</h3>
+            <div class="form-group">
+                <label for="apiBaseInput">GAS Web App 地址 (API_BASE)</label>
+                <input type="text" id="apiBaseInput" placeholder="https://script.google.com/macros/s/XXXXXX/exec" spellcheck="false" autocomplete="off">
+                <div class="hint">部署 Google Apps Script 后获取的 /exec 结尾的 URL</div>
+            </div>
+            <div class="form-group">
+                <label for="apiKeyInput">API 密钥 (API_KEY)</label>
+                <input type="text" id="apiKeyInput" placeholder="输入与 GAS 中一致的密钥" spellcheck="false" autocomplete="off">
+                <div class="hint">需与 GAS 代码中设置的 API_KEY 完全一致</div>
+            </div>
+            <button class="btn btn-primary" id="saveSettingsBtn">💾 保存设置</button>
+        </div>
+
+        <!-- 统计栏 -->
+        <div class="stats-bar" id="statsBar" style="display: none;">
+            <span class="stats-text" id="statsText">共 0 个草稿</span>
+            <span class="quota-hint">⚠️ Gmail 每日发送限额约 100-150 封</span>
+        </div>
+
+        <!-- 草稿列表 -->
+        <div class="draft-list" id="draftList"></div>
+
+        <!-- 加载状态 -->
+        <div class="loading-state" id="loadingState">
+            <div class="spinner"></div>
+            <p>正在加载草稿列表…</p>
+        </div>
+
+        <!-- 空状态 -->
+        <div class="empty-state" id="emptyState">
+            <div class="empty-icon">📭</div>
+            <h3>暂无草稿</h3>
+            <p>您的 Gmail 账户中目前没有草稿邮件，或无法获取草稿。请检查设置后刷新。</p>
+        </div>
+
+    </main>
+
+    <!-- Toast 通知容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- ========== JavaScript ========== -->
+    <script>
+        (function() {
+            'use strict';
+
+            /* ============================================
+             * 用户配置区（可修改默认值）
+             * ============================================ */
+
+            // 🔧 修改此处为你的 GAS Web App 地址（部署后获取的 /exec 结尾 URL）
+            const DEFAULT_API_BASE = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+
+            // 🔧 修改此处为你的 API 密钥（需与 GAS 代码中 API_KEY 一致）
+            const DEFAULT_API_KEY = 'your-secret-api-key-here';
+
+            /* ============================================
+             * 状态管理
+             * ============================================ */
+
+            let currentApiBase = DEFAULT_API_BASE;
+            let currentApiKey = DEFAULT_API_KEY;
+            let draftList = [];
+            let isLoading = false;
+            let sendingDraftIds = new Set(); // 正在发送中的草稿ID集合
+
+            // DOM 元素引用
+            const draftListEl = document.getElementById('draftList');
+            const loadingStateEl = document.getElementById('loadingState');
+            const emptyStateEl = document.getElementById('emptyState');
+            const statsBarEl = document.getElementById('statsBar');
+            const statsTextEl = document.getElementById('statsText');
+            const toastContainerEl = document.getElementById('toastContainer');
+            const settingsPanelEl = document.getElementById('settingsPanel');
+            const apiBaseInputEl = document.getElementById('apiBaseInput');
+            const apiKeyInputEl = document.getElementById('apiKeyInput');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const settingsToggleBtn = document.getElementById('settingsToggleBtn');
+            const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+
+            /* ============================================
+             * 初始化
+             * ============================================ */
+
+            function init() {
+                // 从 localStorage 读取保存的配置
+                loadSettingsFromStorage();
+                // 填充设置面板输入框
+                apiBaseInputEl.value = currentApiBase;
+                apiKeyInputEl.value = currentApiKey;
+                // 绑定事件
+                bindEvents();
+                // 自动加载草稿列表
+                fetchDraftList();
+            }
+
+            /**
+             * 从 localStorage 加载已保存的 API 配置
+             */
+            function loadSettingsFromStorage() {
+                try {
+                    const savedBase = localStorage.getItem('gmailDraftSender_apiBase');
+                    const savedKey = localStorage.getItem('gmailDraftSender_apiKey');
+                    if (savedBase && savedBase.trim() !== '') {
+                        currentApiBase = savedBase.trim();
+                    }
+                    if (savedKey && savedKey.trim() !== '') {
+                        currentApiKey = savedKey.trim();
+                    }
+                } catch (e) {
+                    console.warn('无法读取 localStorage 配置:', e);
+                }
+            }
+
+            /**
+             * 保存 API 配置到 localStorage
+             */
+            function saveSettingsToStorage(base, key) {
+                try {
+                    localStorage.setItem('gmailDraftSender_apiBase', base);
+                    localStorage.setItem('gmailDraftSender_apiKey', key);
+                } catch (e) {
+                    console.warn('无法保存配置到 localStorage:', e);
+                }
+            }
+
+            /**
+             * 绑定所有事件监听器
+             */
+            function bindEvents() {
+                refreshBtn.addEventListener('click', () => {
+                    fetchDraftList();
+                });
+
+                settingsToggleBtn.addEventListener('click', () => {
+                    settingsPanelEl.classList.toggle('visible');
+                });
+
+                saveSettingsBtn.addEventListener('click', () => {
+                    const newBase = apiBaseInputEl.value.trim();
+                    const newKey = apiKeyInputEl.value.trim();
+
+                    if (!newBase) {
+                        showToast('请输入 GAS Web App 地址', 'error');
+                        return;
+                    }
+                    if (!newBase.startsWith('https://')) {
+                        showToast('API 地址需以 https:// 开头', 'error');
+                        return;
+                    }
+                    if (!newKey) {
+                        showToast('请输入 API 密钥', 'error');
+                        return;
+                    }
+
+                    currentApiBase = newBase;
+                    currentApiKey = newKey;
+                    saveSettingsToStorage(newBase, newKey);
+                    settingsPanelEl.classList.remove('visible');
+                    showToast('设置已保存 ✅', 'success');
+                    // 重新加载草稿列表
+                    fetchDraftList();
+                });
+            }
+
+            /* ============================================
+             * Toast 通知
+             * ============================================ */
+
+            /**
+             * 显示 Toast 通知
+             * @param {string} message - 通知内容
+             * @param {string} type - 类型: 'success' | 'error' | 'info'
+             */
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.textContent = message;
+                toastContainerEl.appendChild(toast);
+
+                // 动画结束后移除
+                toast.addEventListener('animationend', (e) => {
+                    if (e.animationName === 'toastOut') {
+                        toast.remove();
+                    }
+                });
+
+                // 兜底移除（防止动画事件未触发）
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 3500);
+            }
+
+            /* ============================================
+             * 获取草稿列表
+             * ============================================ */
+
+            /**
+             * 从 GAS 后端获取草稿列表
+             */
+            async function fetchDraftList() {
+                if (isLoading) return;
+                isLoading = true;
+
+                // 显示加载状态
+                showLoadingState();
+
+                try {
+                    const formData = new URLSearchParams();
+                    formData.append('action', 'list');
+                    formData.append('apiKey', currentApiKey);
+
+                    const response = await fetch(currentApiBase, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        },
+                        // 设置超时（使用 AbortController）
+                        signal: AbortSignal.timeout(15000), // 15秒超时
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP 错误：${response.status} ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.success === false) {
+                        throw new Error(result.message || '获取草稿列表失败');
+                    }
+
+                    // 兼容不同的响应格式
+                    const drafts = result.data || result.drafts || [];
+                    if (!Array.isArray(drafts)) {
+                        throw new Error('响应数据格式异常');
+                    }
+
+                    draftList = drafts;
+                    renderDraftList(drafts);
+                    showToast(`成功加载 ${drafts.length} 个草稿 📬`, 'success');
+
+                } catch (error) {
+                    console.error('获取草稿列表失败:', error);
+                    showToast(`获取草稿失败：${error.message}`, 'error');
+                    // 显示空状态或错误状态
+                    renderDraftList([]);
+                    showEmptyState('获取草稿列表失败', error.message);
+                } finally {
+                    isLoading = false;
+                    hideLoadingState();
+                }
+            }
+
+            /* ============================================
+             * 发送草稿
+             * ============================================ */
+
+            /**
+             * 发送指定的草稿
+             * @param {string} draftId - 草稿ID
+             * @param {HTMLElement} buttonEl - 触发发送的按钮元素
+             */
+            async function sendDraft(draftId, buttonEl) {
+                if (!draftId) {
+                    showToast('无效的草稿 ID', 'error');
+                    return;
+                }
+                if (sendingDraftIds.has(draftId)) {
+                    showToast('该草稿正在发送中，请稍候…', 'info');
+                    return;
+                }
+
+                sendingDraftIds.add(draftId);
+                // 更新按钮状态
+                updateSendButton(buttonEl, 'loading');
+
+                try {
+                    const formData = new URLSearchParams();
+                    formData.append('action', 'send');
+                    formData.append('draftId', draftId);
+                    formData.append('apiKey', currentApiKey);
+
+                    const response = await fetch(currentApiBase, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        },
+                        signal: AbortSignal.timeout(15000), // 15秒超时
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP 错误：${response.status} ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.success === false) {
+                        throw new Error(result.message || '发送失败');
+                    }
+
+                    // 发送成功
+                    updateSendButton(buttonEl, 'success');
+                    showToast(`草稿发送成功！📨${result.message ? ' ' + result.message : ''}`, 'success');
+
+                    // 延迟后刷新列表（草稿已发送，从草稿箱移除）
+                    setTimeout(() => {
+                        fetchDraftList();
+                    }, 1200);
+
+                } catch (error) {
+                    console.error('发送草稿失败:', error);
+                    updateSendButton(buttonEl, 'error');
+                    showToast(`发送失败：${error.message}`, 'error');
+
+                    // 延迟后恢复按钮状态
+                    setTimeout(() => {
+                        updateSendButton(buttonEl, 'default');
+                    }, 2500);
+                } finally {
+                    sendingDraftIds.delete(draftId);
+                    // 确保按钮最终恢复（如果还在加载状态）
+                    if (buttonEl.dataset.state === 'loading') {
+                        setTimeout(() => {
+                            updateSendButton(buttonEl, 'default');
+                        }, 3000);
+                    }
+                }
+            }
+
+            /**
+             * 更新发送按钮的显示状态
+             * @param {HTMLElement} buttonEl - 按钮元素
+             * @param {string} state - 'default' | 'loading' | 'success' | 'error'
+             */
+            function updateSendButton(buttonEl, state) {
+                if (!buttonEl) return;
+                buttonEl.dataset.state = state;
+
+                // 清除之前的状态类
+                buttonEl.classList.remove('success-sent', 'error-sent');
+
+                switch (state) {
+                    case 'loading':
+                        buttonEl.disabled = true;
+                        buttonEl.textContent = '⏳ 发送中…';
+                        break;
+                    case 'success':
+                        buttonEl.disabled = true;
+                        buttonEl.textContent = '✅ 已发送';
+                        buttonEl.classList.add('success-sent');
+                        break;
+                    case 'error':
+                        buttonEl.disabled = false;
+                        buttonEl.textContent = '❌ 重试';
+                        buttonEl.classList.add('error-sent');
+                        break;
+                    case 'default':
+                    default:
+                        buttonEl.disabled = false;
+                        buttonEl.textContent = '📤 发送此草稿';
+                        buttonEl.dataset.state = 'default';
+                        break;
+                }
+            }
+
+            /* ============================================
+             * 渲染
+             * ============================================ */
+
+            /**
+             * 渲染草稿列表
+             * @param {Array} drafts - 草稿数组
+             */
+            function renderDraftList(drafts) {
+                // 清空列表
+                draftListEl.innerHTML = '';
+
+                if (drafts.length === 0) {
+                    showEmptyState('暂无草稿', '您的 Gmail 账户中目前没有草稿邮件。');
+                    statsBarEl.style.display = 'none';
+                    return;
+                }
+
+                statsBarEl.style.display = 'flex';
+                statsTextEl.textContent = `📋 共 ${drafts.length} 个草稿`;
+
+                // 隐藏空状态
+                emptyStateEl.classList.remove('visible');
+                emptyStateEl.style.display = 'none';
+
+                // 为每个草稿创建卡片
+                drafts.forEach((draft, index) => {
+                    const card = createDraftCard(draft, index);
+                    draftListEl.appendChild(card);
+                });
+            }
+
+            /**
+             * 创建单个草稿卡片
+             * @param {Object} draft - 草稿对象
+             * @param {number} index - 索引（用于动画延迟）
+             * @returns {HTMLElement} 卡片元素
+             */
+            function createDraftCard(draft, index) {
+                const card = document.createElement('div');
+                card.className = 'draft-card';
+                card.style.animationDelay = `${index * 0.05}s`;
+
+                const subject = draft.subject || '（无主题）';
+                const to = draft.to || '（无收件人）';
+                const preview = draft.preview || '（无正文预览）';
+                const draftId = draft.id || '';
+
+                card.innerHTML = `
+                    <div class="card-top">
+                        <div class="draft-subject">${escapeHtml(subject)}</div>
+                        <span class="draft-badge">草稿</span>
+                    </div>
+                    <div class="draft-to">
+                        <span class="to-label">收件人：</span>
+                        <span>${escapeHtml(to)}</span>
+                    </div>
+                    <div class="draft-preview">${escapeHtml(preview)}</div>
+                    <div class="card-footer">
+                        <span class="draft-id-hint" title="${escapeHtml(draftId)}">ID: ${escapeHtml(draftId)}</span>
+                        <button class="btn btn-send" data-draft-id="${escapeHtml(draftId)}" data-state="default">
+                            📤 发送此草稿
+                        </button>
+                    </div>
+                `;
+
+                // 绑定发送按钮事件
+                const sendBtn = card.querySelector('.btn-send');
+                sendBtn.addEventListener('click', () => {
+                    const id = sendBtn.dataset.draftId;
+                    sendDraft(id, sendBtn);
+                });
+
+                return card;
+            }
+
+            /**
+             * 显示加载状态
+             */
+            function showLoadingState() {
+                loadingStateEl.classList.add('visible');
+                loadingStateEl.style.display = 'flex';
+                draftListEl.innerHTML = '';
+                emptyStateEl.classList.remove('visible');
+                emptyStateEl.style.display = 'none';
+                statsBarEl.style.display = 'none';
+            }
+
+            /**
+             * 隐藏加载状态
+             */
+            function hideLoadingState() {
+                loadingStateEl.classList.remove('visible');
+                loadingStateEl.style.display = 'none';
+            }
+
+            /**
+             * 显示空状态
+             * @param {string} title - 标题
+             * @param {string} desc - 描述
+             */
+            function showEmptyState(title, desc) {
+                emptyStateEl.classList.add('visible');
+                emptyStateEl.style.display = 'flex';
+                emptyStateEl.querySelector('h3').textContent = title;
+                emptyStateEl.querySelector('p').textContent = desc;
+                draftListEl.innerHTML = '';
+                statsBarEl.style.display = 'none';
+            }
+
+            /**
+             * HTML 转义，防止 XSS
+             * @param {string} str - 原始字符串
+             * @returns {string} 转义后的字符串
+             */
+            function escapeHtml(str) {
+                if (str === null || str === undefined) return '';
+                const div = document.createElement('div');
+                div.textContent = String(str);
+                return div.innerHTML;
+            }
+
+            /* ============================================
+             * 启动应用
+             * ============================================ */
+
+            // DOM 加载完成后初始化
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+
+        })();
+    </script>
+</body>
+</html>
